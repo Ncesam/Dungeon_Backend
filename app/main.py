@@ -52,7 +52,7 @@ class Server:
         monitoring_process = multiprocessing.Process(
             target=self.bot.monitoring,
             name=str(args["item_id"]),
-            args=(args["item_id"], args["max_price"], args["user_id"], args["delay"])
+            args=(args["item_id"], args["max_price"], args["user_id"], args["delay"], args["name"])
         )
         monitoring_process.start()
         self.logger.info(f"Мониторинг запущен для item_id={args['item_id']}.")
