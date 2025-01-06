@@ -11,27 +11,34 @@ from logger import logger
 
 class Server:
     def __init__(self):
-        self.bot = VKBot() 
+        self.bot = VKBot()
         logger.info("Сервер инициализирован.")
+        self.active_processes = {}  # Для отслеживания активных процессов мониторинга
 
     def run(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((config.env['SERVER_IP'], int(config.env['SERVER_PORT'])))
         sock.listen(2)
-        logger.info(
-            f"Сервер запущен и ожидает подключения на {config.env['SERVER_IP']}:{config.env['SERVER_PORT']}.")
+        logger.info(f"Сервер запущен и ожидает подключения на {config.env['SERVER_IP']}:{config.env['SERVER_PORT']}.")
         while True:
             conn, addr = sock.accept()
             logger.info(f"Подключение от {addr}.")
             try:
-                data = conn.recv(4096).decode()
-                logger.info(f"Получены данные: {data}")
-                if "start monitoring" in data:
-                    self.start_monitoring(data, conn)
-                elif "stop monitoring" in data:
-                    self.stop_monitoring(data, conn)
+                while True:
+                    data = conn.recv(4096).decode()
+                    if data:
+                        logger.info(f"Получены данные: {data}")
+                        if "start monitoring" in data:
+                            self.start_monitoring(data, conn)
+                        elif "stop monitoring" in data:
+                            self.stop_monitoring(data, conn)
+                    if not data:  # Если данные не получены, клиент мог отключиться
+                        logger.warning(f"Соединение с {addr} разорвано.")
+                        break  # Прерываем обработку для данного клиента
             except Exception as e:
                 logger.error(f"Ошибка при обработке подключения: {e}")
+            finally:
+                conn.close()
 
     def find_process(self, name):
         for proc in psutil.process_iter(attrs=['pid', 'name']):
@@ -49,28 +56,35 @@ class Server:
         if self.find_process(str(args["item_id"])):
             logger.warning(f"Мониторинг уже запущен для item_id={args['item_id']}.")
             return
+
+        # Создаем процесс мониторинга и запускаем его
         args = (int(args["item_id"]), int(args["max_price"]), int(args["user_id"]), int(args["delay"]), args["name"], conn)
         monitoring_process = multiprocessing.Process(
             target=self.bot.monitoring,
             name=str(args[0]),
             args=args)
         monitoring_process.start()
+        self.active_processes[args[0]] = monitoring_process  # Добавляем процесс в словарь активных процессов
         logger.info(f"Мониторинг запущен для item_id={args[0]}.")
         conn.send(f"Мониторинг запущен для item_id={args[0]}.".encode('utf-8'))
 
     def stop_monitoring(self, data, conn):
         args = self.parse_args(data)
-        process = self.find_process(str(args["item_id"]))
+        item_id = int(args["item_id"])
+        process = self.active_processes.get(item_id)
+
         if process:
-            process.terminate()
-            process.join()
-            logger.info(f"Мониторинг остановлен для item_id={args['item_id']}.")
-            conn.send(f"Мониторинг остановлен для item_id={args['item_id']}.".encode('utf-8'))
+            process.terminate()  # Останавливаем процесс мониторинга
+            process.join()  # Ожидаем завершения процесса
+            del self.active_processes[item_id]  # Удаляем из активных процессов
+            logger.info(f"Мониторинг остановлен для item_id={item_id}.")
+            conn.send(f"Мониторинг остановлен для item_id={item_id}.".encode('utf-8'))
         else:
-            logger.warning(f"Процесс для item_id={args['item_id']} не найден.")
-            return 0
+            logger.warning(f"Процесс для item_id={item_id} не найден.")
+            conn.send(f"Процесс для item_id={item_id} не найден.".encode('utf-8'))
 
     def parse_args(self, data):
+        # Преобразуем строку запроса в словарь
         parsed_data = {item.split('=')[0]: item.split('=')[1] for item in data.split(' ') if '=' in item}
         logger.debug(f"Разобранные аргументы: {parsed_data}")
         return parsed_data
@@ -114,7 +128,7 @@ class VKBot:
                 if cheapest_lots == "Later":
                     logger.info(f"{item_id} стоит на ожидании в течении часа")
                     conn.send(f"{item_id} стоит на ожидании в течении часа".encode("utf-8"))
-                    time.sleep(3600)
+                    time.sleep(3600)  # Ждем 1 час
                     continue
                 for lot_id, price in cheapest_lots:
                     self.buy_lot(lot_id, user_id)
@@ -147,7 +161,6 @@ class VKBot:
                     lot_id = int(lot.split(" ")[4].strip().replace("(", '').replace(")", ''))
                     price_for_one = price / count
                     if price_for_one <= max_price:
-                        print("yeah")
                         cheapest_lots.append((lot_id, price))
                 except ValueError as ex:
                     logger.warning(f"Ошибка при обработке лота: {ex}")
