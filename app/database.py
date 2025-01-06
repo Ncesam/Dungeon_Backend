@@ -1,4 +1,5 @@
 import logging
+import os
 
 from sqlalchemy import create_engine, Column, Integer, Time, String, func
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -6,7 +7,10 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 class DataBase:
     def __init__(self, db_file):
-        self.engine = create_engine('sqlite:///' + db_file, echo=False)
+        if not os.path.exists(db_file):
+            with open('example.db', 'w') as file:
+                pass
+        self.engine = create_engine('sqlite:///' + db_file)
         self.session_maker = sessionmaker(bind=self.engine)
         logging.info("Инициализирована база данных: %s", db_file)
 
