@@ -6,73 +6,73 @@ import psutil
 import requests
 import database
 import config
-from logger import Logger
+from logger import logger
 
 
 class Server:
     def __init__(self):
-        self.bot = VKBot()
-        self.logger = Logger().get_logger()  # Используем объект Logger для логирования
-        self.logger.info("Сервер инициализирован.")
+        self.bot = VKBot() 
+        logger.info("Сервер инициализирован.")
 
     def run(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((config.env['SERVER_IP'], int(config.env['SERVER_PORT'])))
         sock.listen(2)
-        self.logger.info(f"Сервер запущен и ожидает подключения на {config.env['SERVER_IP']}:{config.env['SERVER_PORT']}.")
+        logger.info(
+            f"Сервер запущен и ожидает подключения на {config.env['SERVER_IP']}:{config.env['SERVER_PORT']}.")
         while True:
             conn, addr = sock.accept()
-            self.logger.info(f"Подключение от {addr}.")
+            logger.info(f"Подключение от {addr}.")
             try:
                 data = conn.recv(4096).decode()
-                self.logger.info(f"Получены данные: {data}")
+                logger.info(f"Получены данные: {data}")
                 if "start monitoring" in data:
-                    self.start_monitoring(data)
+                    self.start_monitoring(data, conn)
                 elif "stop monitoring" in data:
-                    self.stop_monitoring(data)
+                    self.stop_monitoring(data, conn)
             except Exception as e:
-                self.logger.error(f"Ошибка при обработке подключения: {e}")
+                logger.error(f"Ошибка при обработке подключения: {e}")
 
     def find_process(self, name):
         for proc in psutil.process_iter(attrs=['pid', 'name']):
             try:
                 if proc.info['name'] == name:
-                    self.logger.info(f"Процесс найден: {name}")
+                    logger.info(f"Процесс найден: {name}")
                     return proc
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
-                self.logger.warning(f"Ошибка при проверке процесса {name}: {e}")
-        self.logger.info(f"Процесс {name} не найден.")
+                logger.warning(f"Ошибка при проверке процесса {name}: {e}")
+        logger.info(f"Процесс {name} не найден.")
         return None
 
-    def start_monitoring(self, data):
+    def start_monitoring(self, data, conn):
         args = self.parse_args(data)
         if self.find_process(str(args["item_id"])):
-            self.logger.warning(f"Мониторинг уже запущен для item_id={args['item_id']}.")
+            logger.warning(f"Мониторинг уже запущен для item_id={args['item_id']}.")
             return
+        args = (int(args["item_id"]), int(args["max_price"]), int(args["user_id"]), int(args["delay"]), args["name"], conn)
         monitoring_process = multiprocessing.Process(
             target=self.bot.monitoring,
-            name=str(args["item_id"]),
-            args=(args["item_id"], args["max_price"], args["user_id"], args["delay"], args["name"])
-        )
+            name=str(args[0]),
+            args=args)
         monitoring_process.start()
-        self.logger.info(f"Мониторинг запущен для item_id={args['item_id']}.")
-        return monitoring_process.name
+        logger.info(f"Мониторинг запущен для item_id={args[0]}.")
+        conn.send(f"Мониторинг запущен для item_id={args[0]}.".encode('utf-8'))
 
-    def stop_monitoring(self, data):
+    def stop_monitoring(self, data, conn):
         args = self.parse_args(data)
         process = self.find_process(str(args["item_id"]))
         if process:
             process.terminate()
             process.join()
-            self.logger.info(f"Мониторинг остановлен для item_id={args['item_id']}.")
-            return 1
+            logger.info(f"Мониторинг остановлен для item_id={args['item_id']}.")
+            conn.send(f"Мониторинг остановлен для item_id={args['item_id']}.".encode('utf-8'))
         else:
-            self.logger.warning(f"Процесс для item_id={args['item_id']} не найден.")
+            logger.warning(f"Процесс для item_id={args['item_id']} не найден.")
             return 0
 
     def parse_args(self, data):
         parsed_data = {item.split('=')[0]: item.split('=')[1] for item in data.split(' ') if '=' in item}
-        self.logger.debug(f"Разобранные аргументы: {parsed_data}")
+        logger.debug(f"Разобранные аргументы: {parsed_data}")
         return parsed_data
 
 
@@ -89,9 +89,6 @@ class VKBot:
     }
     database_service = database.ServiceDatabase()
 
-    def __init__(self):
-        self.logger = Logger().get_logger()  # Используем объект Logger для логирования
-
     def buy_lot(self, lot_id: int, user_id: int):
         param = copy.deepcopy(self.params)
         param['act'] = 'a_program_say'
@@ -102,49 +99,62 @@ class VKBot:
             'messages[0][message]': f'Купить лот {lot_id}',
         }
         try:
-            response = requests.post(url="https://vip3.activeusers.ru/app.php", params=param, data=data, headers=self.headers)
+            response = requests.post(url="https://vip3.activeusers.ru/app.php", params=param, data=data,
+                                     headers=self.headers)
             response.raise_for_status()
-            self.logger.info(f"Лот {lot_id} куплен для пользователя {user_id}.")
+            logger.info(f"Лот {lot_id} куплен для пользователя {user_id}.")
         except requests.RequestException as e:
-            self.logger.error(f"Ошибка при покупке лота {lot_id}: {e}")
+            logger.error(f"Ошибка при покупке лота {lot_id}: {e}")
 
-    def monitoring(self, item_id: int, max_price: int, user_id: int, delay: int, name: str):
-        self.logger.info(f"Запущен мониторинг для item_id={item_id} с интервалом {delay} секунд.")
+    def monitoring(self, item_id: int, max_price: int, user_id: int, delay: int, name: str, conn):
+        logger.info(f"Запущен мониторинг для item_id={item_id} с интервалом {delay} секунд.")
         while True:
-            time.sleep(delay)
             try:
                 cheapest_lots = self.get_cheapest_lots(item_id, max_price)
+                if cheapest_lots == "Later":
+                    logger.info(f"{item_id} стоит на ожидании в течении часа")
+                    conn.send(f"{item_id} стоит на ожидании в течении часа".encode("utf-8"))
+                    time.sleep(3600)
+                    continue
                 for lot_id, price in cheapest_lots:
                     self.buy_lot(lot_id, user_id)
                     self.database_service.add_lot(lot_id, name, price)
+                    conn.send(f"Купил лот {lot_id} пользователю {user_id}. Имя товара {name} цена {price}.".encode('utf-8'))
+                    time.sleep(5)
+                time.sleep(delay * 60)
             except Exception as e:
-                self.logger.error(f"Ошибка в процессе мониторинга item_id={item_id}: {e}")
+                logger.error(f"Ошибка в процессе мониторинга item_id={item_id}: {e}")
 
     def get_cheapest_lots(self, item_id: int, max_price: int):
         param = copy.deepcopy(self.params)
         param['act'] = 'a_program_run'
         data = f"code=51132l145l691d2fbd8b124d57&context=1&vars[item][id]={item_id}"
         try:
-            response = requests.post(url="https://vip3.activeusers.ru/app.php", params=param, data=data, headers=self.headers)
+            response = requests.post(url="https://vip3.activeusers.ru/app.php", params=param, data=data,
+                                     headers=self.headers)
             response.raise_for_status()
             messages = response.json()
             list_lots = messages['message'][0]['message'].split("\n")
             cheapest_lots = []
+            if list_lots[0] == "🚫Вы просматриваете аукцион слишком часто. Повторите попытку через час.":
+                return "Later"
             for lot in list_lots:
                 try:
+                    if lot[0] == '\r':
+                        break
                     count = int(lot.split(" ")[0].split('*')[0])
                     price = int(lot.split(" ")[2])
                     lot_id = int(lot.split(" ")[4].strip().replace("(", '').replace(")", ''))
                     price_for_one = price / count
-                    self.logger.debug(f"Обнаружен лот: {lot}")
                     if price_for_one <= max_price:
+                        print("yeah")
                         cheapest_lots.append((lot_id, price))
                 except ValueError as ex:
-                    self.logger.warning(f"Ошибка при обработке лота: {ex}")
+                    logger.warning(f"Ошибка при обработке лота: {ex}")
                     continue
             return cheapest_lots
         except requests.RequestException as e:
-            self.logger.error(f"Ошибка при получении лотов: {e}")
+            logger.error(f"Ошибка при получении лотов: {e}")
             return []
 
 
