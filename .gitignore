@@ -1,6 +1,6 @@
 .env
 .venv/*
-Log.log
+app/server.log
 .idea
 */__pycache__/*
 
