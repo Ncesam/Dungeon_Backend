@@ -1,6 +1,6 @@
 import logging
 
-from app import config
+import config
 
 
 class Logger:
