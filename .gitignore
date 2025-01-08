@@ -3,4 +3,5 @@
 app/server.log
 .idea
 */__pycache__/*
-
+lot.db
+app/lot.db

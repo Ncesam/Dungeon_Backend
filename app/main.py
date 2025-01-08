@@ -1,7 +1,5 @@
-import copy
 import multiprocessing
 import socket
-import threading
 import time
 import psutil
 import requests
@@ -9,6 +7,7 @@ import database
 import config
 from logger import logger
 from vk import VkDeleter
+
 
 class Server:
     def __init__(self):
@@ -63,7 +62,8 @@ class Server:
 
         # Создаем процесс мониторинга и запускаем его
         args = (
-            int(args["item_id"]), int(args["max_price"]), int(args["user_id"]), args['auth_key'], int(args["delay"]), args["name"], conn)
+            int(args["item_id"]), int(args["max_price"]), int(args["user_id"]), args['auth_key'], int(args["delay"]),
+            args["name"], conn)
         monitoring_process = multiprocessing.Process(
             target=self.bot.monitoring,
             name=f"{args[0]}-{args[2]}",
@@ -112,7 +112,7 @@ class Server:
         if self.find_process(f"{args['user_id']}"):
             logger.warning(f"Мониторинг уже запущен для user_id={args['user_id']}.")
             return
-        deleter_process = multiprocessing.Process(target=VkDeleter,name=f"{args['user_id']}", args=(args['token'],))
+        deleter_process = multiprocessing.Process(target=VkDeleter, name=f"{args['user_id']}", args=(args['token'],))
         deleter_process.start()
         self.active_processes[f"{args['user_id']}"] = deleter_process
         logger.info(f"Мониторинг запущен {args['user_id']}.")
@@ -125,7 +125,7 @@ class Server:
         args = self.parse_args(data)
         user_processes_lits = []
         for user_processes in self.active_processes.keys():
-            if f"{args['user_id']}" in user_processes and user_processes!= f"{args['user_id']}":
+            if f"{args['user_id']}" in user_processes and user_processes != f"{args['user_id']}":
                 user_processes_lits.append(user_processes)
         del_deleter = False
         for user_processes in user_processes_lits:
