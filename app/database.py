@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import create_engine, Column, Integer, Time, String, func
+from sqlalchemy import create_engine, Column, Integer, String, func, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 from logger import logger
@@ -7,6 +7,7 @@ from logger import logger
 
 class DataBase:
     def __init__(self, db_file):
+        self.path = db_file
         self.engine = create_engine('sqlite:///' + db_file)
         self.session_maker = sessionmaker(bind=self.engine)
         logger.info("Инициализирована база данных: %s", db_file)
@@ -20,6 +21,7 @@ class DataBase:
 class ServiceDatabase:
     def __init__(self):
         self.database = DataBase('lot.db')
+        self.path = self.database.path
         self.session = self.database.session_maker()
         logger.info("Сервис базы данных инициализирован.")
 
@@ -62,5 +64,5 @@ class LotsModel(Base):
     lot_id = Column(Integer)
     name = Column(String)
     price = Column(Integer)
-    time = Column(Time, default=func.now())
+    time = Column(DateTime(timezone=True), default=func.now())
     logging.info("Создана модель лота.")
