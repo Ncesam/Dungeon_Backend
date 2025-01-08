@@ -212,6 +212,7 @@ class VKBot:
             response = requests.post(url="https://vip3.activeusers.ru/app.php", params=param, data=data,
                                      headers=self.headers)
             response.raise_for_status()
+            logger.debug(response.text)
             messages = response.json()
             list_lots = messages['message'][0]['message'].split("\n")
             cheapest_lots = []
