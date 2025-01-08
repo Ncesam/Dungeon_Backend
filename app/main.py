@@ -110,28 +110,23 @@ class Server:
     def start_deleter(self, data, conn):
         args = self.parse_args(data)
         if self.find_process(f"{args['user_id']}"):
-            logger.warning(f"Мониторинг уже запущен для user_id={args['user_id']}.")
+            logger.warning(f"Deleter уже запущен для user_id={args['user_id']}.")
             return
         deleter_process = multiprocessing.Process(target=VkDeleter, name=f"{args['user_id']}", args=(args['token'],))
         deleter_process.start()
         self.active_processes[f"{args['user_id']}"] = deleter_process
-        logger.info(f"Мониторинг запущен {args['user_id']}.")
+        logger.info(f"Deleter запущен {args['user_id']}.")
         try:
-            conn.send(f"Мониторинг запущен {args['user_id']}.".encode('utf-8'))
+            conn.send(f"Deleter запущен {args['user_id']}.".encode('utf-8'))
         except OSError as error:
             logger.warning(f"Клиент отключился от сервера.")
 
     def stop_deleter(self, data, conn):
         args = self.parse_args(data)
-        user_processes_lits = []
-        for user_processes in self.active_processes.keys():
-            if f"{args['user_id']}" in user_processes and user_processes != f"{args['user_id']}":
-                user_processes_lits.append(user_processes)
         del_deleter = False
-        for user_processes in user_processes_lits:
-            if self.active_processes.get(user_processes):
-                del_deleter = False
-            else:
+        for user_processes in self.active_processes.keys():
+            logger.debug(user_processes)
+            if not ((f"{args['user_id']}" in user_processes) and (user_processes != f"{args['user_id']}")):
                 del_deleter = True
         process = self.active_processes.get(f"{args['user_id']}")
         if process and del_deleter:
