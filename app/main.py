@@ -183,7 +183,7 @@ class VKBot:
                     self.database_service.add_lot(lot_id, name, price)
                     conn.send(
                         f"Купил лот {lot_id} пользователю {user_id}. Имя товара {name} цена {price}.".encode('utf-8'))
-                    time.sleep(5)
+                    time.sleep(10)
                 time.sleep(delay * 60)
             except Exception as e:
                 logger.error(f"Ошибка в процессе мониторинга item_id={item_id}: {e}")

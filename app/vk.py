@@ -15,13 +15,16 @@ class VkDeleter:
 
     def run(self):
         while True:
+            time.sleep(20)
             self.loop()
+            time.sleep(10)
 
     def loop(self):
         history_messages = self.vk.messages.getHistory(count=150, offset=0,
                                                        peer_id=self.id_group)
         time.sleep(1)
         for history_message in history_messages['items']:
+            time.sleep(5)
             if "Для покупки любого из лотов" in history_message['text']:
                 self.delete_message(message_id=history_message['id'], peer_id=self.id_group)
             elif "Вы успешно приобрели с аукциона предмет" in history_message['text']:
