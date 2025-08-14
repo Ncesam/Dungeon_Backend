@@ -3,7 +3,6 @@ import os
 from typing import overload, Optional
 
 from loguru import logger as logger_loguru
-from loguru._logger import Logger
 
 from shared.config import Configuration
 
@@ -80,14 +79,14 @@ class Logger:
             )
 
     @overload
-    def get_logger(self) -> Logger:
+    def get_logger(self):
         ...
 
     @overload
-    def get_logger(self, name: str) -> Logger:
+    def get_logger(self, name: str):
         ...
 
-    def get_logger(self, name: Optional[str] = None) -> Logger:
+    def get_logger(self, name: Optional[str] = None):
         if name is None:
             return self._logger
 
