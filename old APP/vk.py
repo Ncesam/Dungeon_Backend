@@ -1,13 +1,12 @@
 import time
 
-import vk_api
-
+import logics
 from logger import logger
 
 
 class VkDeleter:
     def __init__(self, token: str = None):
-        self.vk_session = vk_api.VkApi(
+        self.vk_session = logics.VkApi(
             token=token)
         self.vk = self.vk_session.get_api()
         self.id_group = self.get_group()

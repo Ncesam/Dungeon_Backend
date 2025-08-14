@@ -1,0 +1,4 @@
+Database:
+  Path: "lots.db"
+
+Debug: True

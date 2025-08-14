@@ -1,0 +1,7 @@
+services:
+  api:
+    build:
+      dockerfile: docker/services/api.Dev.Dockerfile
+    volumes:
+      - ../../:/old APP
+
