@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.13
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -10,8 +10,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 - && \
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-root
+COPY pyproject.toml poetry.lock ./
+RUN poetry install -n --no-root
 
 COPY . /app
 

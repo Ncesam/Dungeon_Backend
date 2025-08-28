@@ -14,7 +14,7 @@ done
 echo "🔄 Выполняем миграции..."
 touch lots.db
 poetry env activate
-poetry run alembic upgrade head
+poetry list
 
 echo "🚀 Запускаем API..."
 exec poetry run python api/main.py

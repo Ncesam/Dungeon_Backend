@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import Generic, TypeVar, Type, Sequence, Any
 
 from sqlalchemy import Row, RowMapping, select
@@ -11,6 +12,7 @@ async_engine: AsyncEngine = create_async_engine(url=f"sqlite+aiosqlite:///{confi
 session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 
+@asynccontextmanager
 async def get_session() -> AsyncSession:
     async with session_maker() as session:
         yield session

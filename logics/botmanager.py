@@ -51,12 +51,12 @@ class BotManager:
             )
             p.start()
             self.deleter_monitors[token] = p
-            logger.info(f"Процесс VkDeleter для {token} запущен (PID {p.pid})")
+            log.info(f"Процесс VkDeleter для {token} запущен (PID {p.pid})")
         else:
-            logger.info(f"Процесс для {token} уже запущен")
+            log.info(f"Процесс для {token} уже запущен")
 
     def stop_vk_deleter(self, token: str):
         proc = self.deleter_monitors.pop(token, None)
         if proc and proc.is_alive():
             proc.terminate()
-            logger.info(f"Процесс для {token} остановлен")
+            log.info(f"Процесс для {token} остановлен")

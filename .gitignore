@@ -3,7 +3,8 @@
 old APP/server.log
 .idea
 */__pycache__/*
-lot.db
+lots.db
+*.log
 old APP/lot.db
 config.yaml
 poetry.lock
