@@ -7,4 +7,3 @@ lots.db
 *.log
 old APP/lot.db
 config.yaml
-poetry.lock
