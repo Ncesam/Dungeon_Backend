@@ -26,7 +26,7 @@ class VkDeleter:
             peer = conv["conversation"]["peer"]
             if peer["type"] == "group":
                 group_info = await self.api.get_group_by_id(abs(peer["id"]))
-                if group_info and group_info[0]["name"] == self.target_group_name:
+                if group_info["groups"][0] and group_info["groups"][0]["name"] == self.target_group_name:
                     log.info(f"Нашёл группу: {self.target_group_name}")
                     return peer["id"]
         log.warning("Группа не найдена")

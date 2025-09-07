@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 
 import aiohttp
 
@@ -37,7 +37,7 @@ class VkApiAsync:
     async def get_conversations(self, count: int = 15) -> dict:
         return await self.call("messages.getConversations", count=count)
 
-    async def get_group_by_id(self, group_id: int) -> List[dict]:
+    async def get_group_by_id(self, group_id: int) -> dict:
         return await self.call("groups.getById", group_id=group_id)
 
     async def get_history(self, peer_id: int, count: int = 150, offset: int = 0) -> dict:

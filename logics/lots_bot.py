@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 import traceback
 from typing import List
@@ -50,7 +51,7 @@ class VKBot:
             log.debug(traceback.format_exc())
 
     async def get_cheapest_lots(self, item_id: int, auth_key: str, max_price: int, user_id: int) -> List[
-                                                                                                        LotSchema] | None:
+                                                                                                        LotSchema] | int:
         url = "https://vip3.activeusers.ru/app.php"
         params = {
             'act': 'a_program_run',
@@ -63,15 +64,16 @@ class VKBot:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, params=params, data=data, headers=self.headers) as resp:
                     resp.raise_for_status()
+
                     response_text = await resp.text()
                     log.debug(f"📨 Ответ от аукциона:\n{response_text}")
-                    response_json = await resp.json()
+                    response_json = json.loads(response_text)
 
                     lots_text = response_json['message'][0]['message']
                     list_lots = lots_text.split('\n')
 
                     if list_lots[0].startswith("🚫Вы просматриваете аукцион слишком часто"):
-                        return None
+                        return 1
 
                     cheapest_lots = []
                     for lot in list_lots:
@@ -106,11 +108,14 @@ class VKBot:
         while True:
             try:
                 cheapest_lots = await self.get_cheapest_lots(item_id, auth_key, max_price, user_id)
-                if not cheapest_lots:
+                if isinstance(cheapest_lots, int):
                     log.info(f"⏳ {item_id} стоит на ожидании (частый просмотр). Пауза на 1 час.")
                     await asyncio.sleep(3600)
                     continue
-
+                if isinstance(cheapest_lots, list) and len(cheapest_lots) == 0:
+                    log.info(f"⏳ {item_id}: нет подходящих лотов стоит на паузу на {delay} минут")
+                    await asyncio.sleep(delay * 60)
+                    continue
                 for lot_id, price in cheapest_lots:
                     await self.buy_lot(lot_id, user_id, auth_key)
                     await self.lot_service.add_lot(LotSchema(id=lot_id, name=name, price=price))
