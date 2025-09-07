@@ -6,6 +6,7 @@ from typing import List
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.repository import get_session
 from database.services import LotService
 from shared.logger import logger
 from shared.schemas import LotSchema
@@ -129,3 +130,13 @@ class VKBot:
         except Exception as e:
             log.error(f"❌ Ошибка при отправке лотов: {e}")
             log.debug(traceback.format_exc())
+
+
+def start_monitoring(item_id: int, max_price: int, user_id: int, auth_key: str, delay: int, name: str):
+    async def async_impl():
+        async with get_session() as session:
+            vk_bot = VKBot(session)
+            log.info(f"Мониторинг лота {item_id} статус: Запуск")
+            await vk_bot.monitoring(item_id, max_price, user_id, auth_key, delay, name)
+
+    asyncio.run(async_impl())

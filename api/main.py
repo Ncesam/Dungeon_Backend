@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.bot import router as bot_router
-from database.repository import get_session
 from logics.botmanager import BotManager
 from shared.config import Configuration
 
@@ -14,9 +13,8 @@ configuration = Configuration()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with get_session() as session:
-        app.state.bot_manager = BotManager(session)
-        yield
+    app.state.bot_manager = BotManager()
+    yield
 
 
 app = FastAPI(debug=configuration.DEBUG, lifespan=lifespan)

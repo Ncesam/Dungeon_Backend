@@ -12,9 +12,9 @@ while getopts "d" opt; do
 done
 
 echo "🔄 Выполняем миграции..."
-touch lots.db
-poetry env activate
-poetry list
+touch lots.db3
+poetry run python -m alembic upgrade head
+
 
 echo "🚀 Запускаем API..."
 exec poetry run python api/main.py
