@@ -119,10 +119,10 @@ class VKBot:
                     log.info(f"⏳ {item_id}: нет подходящих лотов стоит на паузу на {delay} минут")
                     await asyncio.sleep(delay * 60)
                     continue
-                for lot_id, price in cheapest_lots:
-                    await self.buy_lot(lot_id, user_id, auth_key)
-                    await self.lot_service.add_lot(LotSchema(id=lot_id, name=name, price=price))
-                    log.info(f"✅ Куплен лот {lot_id} для пользователя {user_id}. Товар: {name}, цена: {price}.")
+                for lot in cheapest_lots:
+                    await self.buy_lot(lot.id, user_id, auth_key)
+                    await self.lot_service.add_lot(LotSchema(id=lot.id, name=lot.name, price=lot.price))
+                    log.info(f"✅ Куплен лот {lot.id} для пользователя {user_id}. Товар: {lot.name}, цена: {lot.price}.")
                     await asyncio.sleep(10)
 
                 await asyncio.sleep(delay * 60)
