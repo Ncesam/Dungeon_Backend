@@ -50,8 +50,8 @@ class VKBot:
             log.error(f"❌ Ошибка при покупке лота {lot_id} пользователю {user_id}: {e}")
             log.debug(traceback.format_exc())
 
-    async def get_cheapest_lots(self, item_id: int, auth_key: str, max_price: int, user_id: int) -> List[
-                                                                                                        LotSchema] | int:
+    async def get_cheapest_lots(self, item_id: int, auth_key: str, max_price: int, user_id: int) -> int | list[
+        LotSchema] | None:
         url = "https://vip3.activeusers.ru/app.php"
         params = {
             'act': 'a_program_run',
@@ -90,7 +90,8 @@ class VKBot:
                             parts = lot.split(" ")
                             count = int(parts[0].split('*')[0])
                             price = int(parts[2])
-                            name = parts[3:-1]
+                            name_array = parts[3:-1]
+                            name = " ".join(name_array)
                             if (price / count) <= max_price:
                                 cheapest_lots.append(LotSchema(id=lot_id, name=name, price=price))
                         except Exception as ex:
@@ -100,7 +101,7 @@ class VKBot:
         except aiohttp.ClientError as e:
             log.error(f"❌ Ошибка при получении лотов: {e}")
             log.debug(traceback.format_exc())
-            return None
+            return
 
     async def monitoring(self, item_id: int, max_price: int, user_id: int, auth_key: str, delay: int, name: str):
         log.info(f"🚀 Запущен мониторинг для item_id={item_id}, интервал: {delay} мин., максимальная цена: {max_price}")
@@ -108,6 +109,8 @@ class VKBot:
         while True:
             try:
                 cheapest_lots = await self.get_cheapest_lots(item_id, auth_key, max_price, user_id)
+                if cheapest_lots is None:
+                    continue
                 if isinstance(cheapest_lots, int):
                     log.info(f"⏳ {item_id} стоит на ожидании (частый просмотр). Пауза на 1 час.")
                     await asyncio.sleep(3600)
